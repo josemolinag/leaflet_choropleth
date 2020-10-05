@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<title>Display a map</title>
+	<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+	<script src="https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.js"></script>
+	<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+	<link href="https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.css" rel="stylesheet" />
+	<style>
+		body {
+			margin: 0;
+			padding: 0;
+		}
+
+		h2,
+		h3 {
+			margin: 10px;
+			font-size: 1.2em;
+		}
+
+		h3 {
+			font-size: 1em;
+		}
+
+		p {
+			font-size: 0.85em;
+			margin: 10px;
+			text-align: left;
+		}
+
+		/**
+	* Create a position for the map
+	* on the page */
+		#map {
+			position: absolute;
+			top: 0;
+			bottom: 0;
+			width: 100%;
+		}
+
+		/**
+	* Set rules for how the map overlays
+	* (information box and legend) will be displayed
+	* on the page. */
+		.map-overlay {
+			position: absolute;
+			bottom: 0;
+			right: 0;
+			background: rgba(255, 255, 255, 0.8);
+			margin-right: 20px;
+			font-family: Arial, sans-serif;
+			overflow: auto;
+			border-radius: 3px;
+		}
+
+		#features {
+			top: 0;
+			height: 100px;
+			margin-top: 20px;
+			width: 250px;
+		}
+
+		#legend {
+			padding: 10px;
+			box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+			line-height: 18px;
+			height: 150px;
+			margin-bottom: 40px;
+			width: 100px;
+		}
+
+		.legend-key {
+			display: inline-block;
+			border-radius: 20%;
+			width: 10px;
+			height: 10px;
+			margin-right: 5px;
+		}
+	</style>
+</head>
+
+<body>
+	<div id='map'></div>
+	<div class='map-overlay' id='features'>
+		<h2>US population density</h2>
+		<div id='pd'>
+			<p>Hover over a state!</p>
+		</div>
+	</div>
+	<div class='map-overlay' id='legend'></div>
+
+	<script>
+		mapboxgl.accessToken = 'pk.eyJ1Ijoiam9zZW1vbGluYWciLCJhIjoiY2s3eXZ1ZHQ4MDAyaTNscGZlNGJkcTZxeCJ9.d3oMTaNQMkb98YOmqUBdIg';
+
+
+		var map = new mapboxgl.Map({
+			container: 'map', // container id
+			style: 'mapbox://styles/josemolinag/ckfezyuyb0sd71apilfdmkfyx' // replace this with your style URL
+		});
+
+		var bounds = [
+			[-18, 30], // Southwest coordinates
+			[4.3, 50] // Northeast coordinates
+		];
+		map.fitBounds(bounds);
+
+		map.getCanvas().style.cursor = 'default';
+		map.on('load', function() {
+			// the rest of the code will go in here
+			var layers = ['0-10', '10-20', '20-50', '50-100', '100-200', '200-500', '500-1000', '1000+'];
+			var colors = ['#FFEDA0', '#FED976', '#FEB24C', '#FD8D3C', '#FC4E2A', '#E31A1C', '#BD0026', '#800026'];
+
+			for (i = 0; i < layers.length; i++) {
+				var layer = layers[i];
+				var color = colors[i];
+				var item = document.createElement('div');
+				var key = document.createElement('span');
+				key.className = 'legend-key';
+				key.style.backgroundColor = color;
+
+				var value = document.createElement('span');
+				value.innerHTML = layer;
+				item.appendChild(key);
+				item.appendChild(value);
+				legend.appendChild(item);
+			}
+
+			// change info window on hover
+			map.on('mousemove', function(e) {
+				var municipios = map.queryRenderedFeatures(e.point, {
+					layers: ['canary-displaced-reduced-c98q3g']
+				});
+
+				if (states.length > 0) {
+					document.getElementById('pd').innerHTML =
+						'<h3><strong>' +
+						municipios[0].properties.municipio +
+						'</strong></h3><p><strong><em>' +
+						municipios[0].properties.Pob_2020 +
+						'</strong> people per square mile</em></p>';
+				} else {
+					document.getElementById('pd').innerHTML =
+						'<p>Pasa el ratón por encima!</p>';
+				}
+			});
+		});
+
+
+		// poner geocoder para buscar municipios
+		//código para cargar fichero externo y linkarlo sobre un
+		//https://ovrdc.github.io/gis-tutorials/mapbox/06-choropleth-data-join/#3.59/39.21/-94.54
+
+		//código de raúl
+
+		// var totalWidth = window.innerWidth,
+		//   isMobile = totalWidth < 900;
+		// var bounds = [
+		//   [-20.854845, 30], // Southwest coordinates
+		//   [15.815525, 50] // Northeast coordinates
+		// ];
+		//
+		// var map = new mapboxgl.Map({
+		//   container: 'map',
+		//   style: 'mapbox://styles/raulsanchezeldiario/ck1lx756w02xl1clrmr26hp20',
+		//   center: [-3.692806, 39.423602],
+		//   zoom: isMobile ? 4 : 5,
+		//   minZoom: 4,
+		//   maxZoom: 11,
+		//   maxBounds: bounds,
+		//   attributionControl: false,
+		//   maxTileCacheSize: 8
+		//
+		// });
+		// var hoveredStateId = null;
+		//
+		// map.scrollZoom.disable();
+		//
+		//
+		// var geocoder = new MapboxGeocoder({
+		//   accessToken: mapboxgl.accessToken,
+		//   mapboxgl: mapboxgl,
+		//   countries: 'es',
+		//   // language: 'es',
+		//   types: 'region, place, locality',
+		//   marker: false,
+		//   placeholder: 'Busca tu municipio',
+		// });
+		// map.addControl(new mapboxgl.NavigationControl());
+		//
+		// map.addControl(new mapboxgl.FullscreenControl({
+		//   container: document.querySelector('body')
+		// }));
+		//
+		//
+		// map.addControl(
+		//   new mapboxgl.AttributionControl({
+		//     compact: true
+		//   }),
+		//   "bottom-right"
+		// );
+		//
+		//
+		// document.getElementById('geocoder').appendChild(geocoder.onAdd(map));
+	</script>
+
+
+
+
+
+</body>
+
+</html>
