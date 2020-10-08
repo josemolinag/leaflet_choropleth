@@ -1,0 +1,746 @@
+<script>
+  mapboxgl.accessToken =
+    'pk.eyJ1IjoicmF1bHNhbmNoZXplbGRpYXJpbyIsImEiOiJjamt3cmh6MXQwMHZlM3ZvZnprZWVvcWN4In0.-6I0cf8YXAABfTTuzLp0HQ';
+
+  var totalWidth = window.innerWidth,
+    isMobile = totalWidth < 900;
+  var bounds = [
+    [-20.854845, 30], // Southwest coordinates
+    [15.815525, 50] // Northeast coordinates
+  ];
+
+  var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/raulsanchezeldiario/ck1lx756w02xl1clrmr26hp20',
+    center: [-3.692806, 39.423602],
+    zoom: isMobile ? 4 : 5,
+    minZoom: 4,
+    maxZoom: 11,
+    maxBounds: bounds,
+    attributionControl: false,
+    maxTileCacheSize: 8
+
+  });
+  var hoveredStateId = null;
+
+  map.scrollZoom.disable();
+
+
+  var geocoder = new MapboxGeocoder({
+    accessToken: mapboxgl.accessToken,
+    mapboxgl: mapboxgl,
+    countries: 'es',
+    // language: 'es',
+    types: 'region, place, locality',
+    marker: false,
+    placeholder: 'Busca tu municipio',
+  });
+  map.addControl(new mapboxgl.NavigationControl());
+
+  map.addControl(new mapboxgl.FullscreenControl({
+    container: document.querySelector('body')
+  }));
+
+
+  map.addControl(
+    new mapboxgl.AttributionControl({
+      compact: true
+    }),
+    "bottom-right"
+  );
+
+
+  document.getElementById('geocoder').appendChild(geocoder.onAdd(map));
+
+
+
+  // Create a popup, but don't add it to the map yet.
+  var popup = new mapboxgl.Popup({
+
+    closeButton: isMobile ? true : false,
+    closeOnClick: false,
+    className: 'mapbox-popup-contenedor',
+  });
+
+
+  var newdata = new Map();
+
+  var getJSON = function (url, callback) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.responseType = 'json';
+    xhr.onload = function () {
+      var status = xhr.status;
+      if (status === 200) {
+        callback(null, xhr.response);
+      } else {
+        callback(status, xhr.response);
+      }
+    };
+    xhr.send();
+  };
+
+  map.on('load', function () {
+
+
+    d3.text('datos-municipios-confirmados-coronavirus.csv', function (err, data) {
+      var dsv = d3.dsvFormat(';')
+      var data = dsv.parse(data)
+      if (err !== null) {
+        console.log('error fetching file')
+      } else {
+        data.forEach(function (row) {
+          if (!row['cumun']) {
+            return;
+          }
+          // get winner
+          var id = +row['cumun'];
+          newdata[id] = {
+            condicioncovid: row.covid,
+            covid: +row.covid,
+            tasa: +row.tasa,
+            muertos: +row.muertos,
+            recuperados: +row.recuperados,
+            poblacion: +row.poblacion,
+            covid14dias: row.covid14dias,
+            ia14dias: +row.ia14dias,
+
+          }
+        })
+
+      }
+      initLayers();
+    })
+
+    var initLayers = function () {
+
+      var blueScale = d3.scaleLinear()
+        .domain([0, 100])
+        .range(['#bad2f0', '#1868d1']);
+
+      var redScale = d3.scaleLinear()
+        .domain([0, 100])
+        .range(['#f2cbcb', '#be2d1e']);
+
+      var actualizacionfecha = d3.scaleOrdinal() // D3 Version 4
+        .domain([
+          'Sevilla',
+          'Jaén',
+          'Málaga',
+          'Granada',
+          'Almería',
+          'Huelva',
+          'Córdoba',
+          'Cádiz',
+          'Asturias',
+          'Illes Balears',
+          'Cantabria',
+          'Madrid',
+          'València/Valencia',
+          'Alacant/Alicante',
+          'Castelló/Castellón',
+          'Las Palmas',
+          'Santa Cruz de Tenerife',
+          'Ciudad Real',
+          'Toledo',
+          'Cuenca',
+          'Albacete',
+          'Guadalajara',
+          'Ávila',
+          'León',
+          'Salamanca',
+          'Palencia',
+          'Valladolid',
+          'Burgos',
+          'Segovia',
+          'Zamora',
+          'Soria',
+          'Barcelona',
+          'Lleida',
+          'Girona',
+          'Tarragona',
+          'Murcia',
+          'Badajoz',
+          'Cáceres',
+          'Bizkaia',
+          'Araba/Álava',
+          'Gipuzkoa',
+          'Navarra',
+          'La Rioja',
+          'Ceuta',
+          'Melilla'
+
+
+
+        ])
+        .range([
+          /* Andalucía */
+          'Datos actualizados a 15 de septiembre a las 00:00h',
+          'Datos actualizados a 15 de septiembre a las 00:00h',
+          'Datos actualizados a 15 de septiembre a las 00:00h',
+          'Datos actualizados a 15 de septiembre a las 00:00h',
+          'Datos actualizados a 15 de septiembre a las 00:00h',
+          'Datos actualizados a 15 de septiembre a las 00:00h',
+          'Datos actualizados a 15 de septiembre a las 00:00h',
+          'Datos actualizados a 15 de septiembre a las 00:00h',
+          /* Asturias */
+          'Datos actualizados a 9 de septiembre',
+          /* Baleares */
+          'Datos (solo PCR) actualizados a 14 de septiembre a las 00:00h',
+          /* Cantabria */
+          'Datos actualizados a 15 de septiembre a las 00:00h',
+          /* Madrid */
+          'Datos (solo PCR) actualizados a 15 de septiembre a las 09:00h',
+          /* C Valenciana */
+          'Datos (solo PCR) actualizados a 15 de septiembre a las 00:00h',
+          'Datos (solo PCR) actualizados a 15 de septiembre a las 00:00h',
+          'Datos (solo PCR) actualizados a 15 de septiembre a las 00:00h',
+
+          /* Canarias */
+          'Datos actualizados a 15 de septiembre a las 14:00h',
+          'Datos actualizados a 15 de septiembre a las 14:00h',
+          /* Castilla-La Mancha */
+          'Datos actualizados a 6 de septiembre',
+          'Datos actualizados a 6 de septiembre',
+          'Datos actualizados a 6 de septiembre',
+          'Datos actualizados a 6 de septiembre',
+          'Datos actualizados a 6 de septiembre',
+          /* Castilla y León */
+          'Datos (solo PCR) actualizados a 15 de septiembre de los municipios más poblados',
+          'Datos (solo PCR) actualizados a 15 de septiembre de los municipios más poblados',
+          'Datos (solo PCR) actualizados a 15 de septiembre de los municipios más poblados',
+          'Datos (solo PCR) actualizados a 15 de septiembre de los municipios más poblados',
+          'Datos (solo PCR) actualizados a 15 de septiembre de los municipios más poblados',
+          'Datos (solo PCR) actualizados a 15 de septiembre de los municipios más poblados',
+          'Datos (solo PCR) actualizados a 15 de septiembre de los municipios más poblados',
+          'Datos (solo PCR) actualizados a 15 de septiembre de los municipios más poblados',
+          'Datos (solo PCR) actualizados a 15 de septiembre de los municipios más poblados',
+          /* Cataluña */
+          'Datos actualizados a 15 de septiembre a las 08:00h',
+          'Datos actualizados a 15 de septiembre a las 08:00h',
+          'Datos actualizados a 15 de septiembre a las 08:00h',
+          'Datos actualizados a 15 de septiembre a las 08:00h',
+          /* Murcia */
+          'Datos actualizados (solo PCR) a 14 de septiembre',
+          /* Extremadura */
+          'Datos (solo PCR) actualizados a 7 de septiembre de los 8 municipios más poblados',
+          'Datos (solo PCR) actualizados a 7 de septiembre de los 8 municipios más poblados',
+          /* Euskadi */
+          'Datos actualizados a 15 de septiembre a las 00:00h',
+          'Datos actualizados a 15 de septiembre a las 00:00h',
+          'Datos actualizados a 15 de septiembre a las 00:00h',
+          /* Navarra */
+          'Datos actualizados a 15 de septiembre de los municipios más poblados',
+           /* La Rioja */
+           'Datos (solo PCR) actualizados a 10 de agosto',
+          /* Ceuta y Melilla */
+          'Datos actualizados a 14 de septiembre a las 00:00h',
+          'Datos actualizados a 14 de septiembre a las 00:00h',
+
+
+
+
+        ])
+        .unknown('Sin fecha de actualización');
+
+
+      var provinciascondatos = ['Sevilla',
+        'Jaén',
+        'Málaga',
+        'Granada',
+        'Almería',
+        'Huelva',
+        'Córdoba',
+        'Cádiz',
+        'Asturias',
+        'Illes Balears',
+        'Cantabria',
+        'Madrid',
+        'València/Valencia',
+        'Alacant/Alicante',
+        'Castelló/Castellón',
+        'Las Palmas',
+        'Santa Cruz de Tenerife',
+        'Ciudad Real',
+        'Toledo',
+        'Cuenca',
+        'Albacete',
+        'Guadalajara',
+        'Ávila',
+        'León',
+        'Salamanca',
+        'Palencia',
+        'Valladolid',
+        'Burgos',
+        'Segovia',
+        'Zamora',
+        'Soria',
+        'Barcelona',
+        'Lleida',
+        'Girona',
+        'Tarragona',
+        'Murcia',
+        'Badajoz',
+        'Cáceres',
+        'Bizkaia',
+        'Araba/Álava',
+        'Gipuzkoa',
+        'Navarra',
+        'La Rioja',
+        'Ceuta',
+        'Melilla'
+      ]
+
+
+      map.addSource('municipiospoligonos', {
+        'type': 'vector',
+        'url': 'mapbox://raulsanchezeldiario.9msgzr5t'
+      });
+
+      map.addSource('provinciaspoligonos', {
+        'type': 'vector',
+        'url': 'mapbox://raulsanchezeldiario.61j6vzjl'
+      });
+
+      map.addSource('municipiospuntos', {
+        'type': 'vector',
+        'url': 'mapbox://raulsanchezeldiario.4i780jcz'
+      });
+
+
+
+      map.addLayer({
+        'id': 'provinciasfondo',
+        'type': 'fill',
+        'source': 'provinciaspoligonos',
+        'source-layer': 'provinciascanariasdesplazada',
+
+        'layout': {
+          'visibility': 'visible',
+        },
+        'paint': {
+          'fill-color': '#e5e5e5',
+          'fill-opacity': 1,
+
+        }
+      }, "land-structure-line");
+
+
+
+
+      map.addLayer({
+        'id': 'municipios-join',
+        'type': 'fill',
+        'source': 'municipiospoligonos',
+        'source-layer': 'municipiosv4canariaspoblacion',
+        'filter': ["match", ["get", "provincia"], provinciascondatos, true, false],
+        'layout': {
+          'visibility': 'visible',
+
+        },
+        'paint': {
+          'fill-color': [
+            'case',
+            ['!=', ['feature-state', 'covid14dias'], ""],
+            ["interpolate", [
+                "linear", 1
+              ],
+              ['feature-state', 'ia14dias'],
+
+              // 0, '#fffaed',
+              // 200, '#f7b500',
+
+              0, '#fff5eb',
+              40, '#fee6ce',
+              80, '#fdd0a2',
+              120, '#fdae6b',
+              160, '#fd8d3c',
+              200, '#f16913',
+              240, '#d94801',
+              280, '#a63603',
+              320, '#7f2704'
+            ], '#e5e5e5'
+          ],
+          'fill-opacity': 1,
+
+
+        },
+
+      }, "land-structure-line");
+
+
+
+      map.addLayer({
+          id: 'puntosmunicipiosmapa',
+          source: 'municipiospuntos',
+          type: 'circle',
+          'source-layer': 'centroidesmunicipioscanariaspoblacion',
+
+          'layout': {
+            'visibility': 'visible',
+          },
+          'paint': {
+
+
+            'circle-radius': ['interpolate', ['linear'],
+              ['zoom'],
+              4, ['/', ['sqrt', ['feature-state', 'covid']], 10],
+              8, ['/', ['sqrt', ['feature-state', 'covid']], 7],
+              12, ['/', ['sqrt', ['feature-state', 'covid']], 4],
+            ],
+
+
+            'circle-color': '#005695',
+            'circle-opacity': 0,
+            'circle-stroke-width': 0,
+            'circle-stroke-color': '#005695',
+          }
+
+        },
+        "waterway-label");
+
+
+      map.addLayer({
+        id: 'bordes-munis',
+        source: 'municipiospoligonos',
+        type: 'line',
+        'filter': ["match", ["get", "provincia"], provinciascondatos, true, false],
+        'source-layer': 'municipiosv4canariaspoblacion',
+        'paint': {
+          'line-color': ['case', ['boolean', ['feature-state', 'hover'], false], 'black',
+            'white'
+          ],
+          'line-width': ['case', ['boolean', ['feature-state', 'hover'], false], 2, 0]
+        }
+      });
+
+
+      var selectortasacovid = document.getElementById('button-tasa-covid');
+      selectortasacovid.addEventListener("click", handleTasa);
+
+      function handleTasa() {
+        selectortasacovid = document.getElementById('button-tasa-covid');
+        map.setPaintProperty('puntosmunicipiosmapa', 'circle-opacity', 0);
+        map.setPaintProperty('puntosmunicipiosmapa', 'circle-stroke-width', 0);
+
+        map.setPaintProperty('municipios-join', 'fill-color', [
+          'case',
+          ['!=', ['feature-state', 'condicioncovid'], ""],
+          ["interpolate", [
+              "linear", 1
+            ],
+            ['feature-state', 'tasa'],
+
+            100, '#EFF4F8',
+            1800, '#005695',
+          ], '#e5e5e5'
+        ]);
+        map.setPaintProperty('municipios-join', 'fill-opacity', 1);
+
+
+        var node = document.getElementById('button-tasa-covid');
+
+        if (!node.classList.contains('button-active')) {
+          var newNode = document.getElementsByClassName('button-active')[0].classList
+            .remove(
+              'button-active');
+          node.classList.add('button-active');
+        }
+
+
+        var nodelegend = document.getElementById('legendtasa');
+
+        if (!nodelegend.classList.contains('legend-img--active')) {
+          var newnodelegend = document.getElementsByClassName('legend-img--active')[0].classList
+            .remove(
+              'legend-img--active');
+          nodelegend.classList.add('legend-img--active');
+        }
+
+
+      }
+
+
+      var selector14diascovid = document.getElementById('button-ia-14-dias');
+      selector14diascovid.addEventListener("click", handle14dias);
+
+      function handle14dias() {
+        selectortasacovid = document.getElementById('button-ia-14-dias');
+        map.setPaintProperty('puntosmunicipiosmapa', 'circle-opacity', 0);
+        map.setPaintProperty('puntosmunicipiosmapa', 'circle-stroke-width', 0);
+
+        map.setPaintProperty('municipios-join', 'fill-color', [
+          'case',
+          ['!=', ['feature-state', 'covid14dias'], ""],
+          ["interpolate", [
+              "linear", 1
+            ],
+            ['feature-state', 'ia14dias'],
+
+            // 0, '#fffaed',
+            // 200, '#f7b500',
+
+            0, '#fff5eb',
+            50, '#fee6ce',
+            100, '#fdd0a2',
+            150, '#fdae6b',
+            200, '#fd8d3c',
+            250, '#f16913',
+            300, '#d94801',
+            350, '#a63603',
+            400, '#7f2704'
+          ], '#e5e5e5'
+        ]);
+        map.setPaintProperty('municipios-join', 'fill-opacity', 1);
+
+
+        var node = document.getElementById('button-ia-14-dias');
+
+        if (!node.classList.contains('button-active')) {
+          var newNode = document.getElementsByClassName('button-active')[0].classList
+            .remove(
+              'button-active');
+          node.classList.add('button-active');
+        }
+
+
+        var nodelegend = document.getElementById('legend14dias');
+
+        if (!nodelegend.classList.contains('legend-img--active')) {
+          var newnodelegend = document.getElementsByClassName('legend-img--active')[0].classList
+            .remove(
+              'legend-img--active');
+          nodelegend.classList.add('legend-img--active');
+        }
+
+
+      }
+
+
+
+
+
+      var selectorcasoscovid = document.getElementById('button-casos-covid');
+      selectorcasoscovid.addEventListener("click", handleCasos);
+
+      function handleCasos() {
+        selectorcasoscovid = document.getElementById('button-casos-covid');
+        map.setPaintProperty('municipios-join', 'fill-opacity', 0);
+        map.setPaintProperty('puntosmunicipiosmapa', 'circle-opacity', 0.2);
+        map.setPaintProperty('puntosmunicipiosmapa', 'circle-stroke-width', ['case', ['>', ['feature-state',
+          'tasa'
+        ], 0], 1, 0]);
+
+
+
+        var node = document.getElementById('button-casos-covid');
+
+        if (!node.classList.contains('button-active')) {
+          var newNode = document.getElementsByClassName('button-active')[0].classList
+            .remove(
+              'button-active');
+          node.classList.add('button-active');
+        }
+
+
+        var nodelegend = document.getElementById('legendcasos');
+
+        if (!nodelegend.classList.contains('legend-img--active')) {
+          var newnodelegend = document.getElementsByClassName('legend-img--active')[0].classList
+            .remove(
+              'legend-img--active');
+          nodelegend.classList.add('legend-img--active');
+        }
+
+
+      }
+
+
+
+
+
+
+
+      var setCountiesColor = function () {
+        for (var key in newdata) {
+          map.setFeatureState({
+            source: 'municipiospoligonos',
+            sourceLayer: 'municipiosv4canariaspoblacion',
+            id: key
+          }, {
+            'tasa': newdata[key]['tasa'],
+            'covid': newdata[key]['covid'],
+            'condicioncovid': newdata[key]['condicioncovid'],
+            'ia14dias': newdata[key]['ia14dias'],
+            'covid14dias': newdata[key]['covid14dias'],
+
+          })
+        }
+      }
+
+
+      var setBubblesColor = function () {
+        for (var codigo in newdata) {
+          map.setFeatureState({
+            source: 'municipiospuntos',
+            sourceLayer: 'centroidesmunicipioscanariaspoblacion',
+            id: codigo
+          }, {
+            'tasa': newdata[codigo]['tasa'],
+            'covid': newdata[codigo]['covid'],
+            'condicioncovid': newdata[codigo]['condicioncovid'],
+          })
+        }
+      }
+
+      map.on('mousemove', 'municipios-join', function (e) {
+
+        if (e.features.length > 0) {
+          if (hoveredStateId) {
+            map.setFeatureState({
+              source: 'municipiospoligonos',
+              sourceLayer: 'municipiosv4canariaspoblacion',
+              id: hoveredStateId
+            }, {
+              hover: false
+            });
+          }
+          hoveredStateId = e.features[0].id;
+          map.setFeatureState({
+            source: 'municipiospoligonos',
+            sourceLayer: 'municipiosv4canariaspoblacion',
+            id: hoveredStateId
+          }, {
+            hover: true
+          });
+        }
+        map.getCanvas().style.cursor = 'pointer';
+
+
+
+
+
+
+
+
+        var coordinates = e.features[0].geometry.coordinates.slice();
+
+
+
+        var municipio = e.features[0].properties.NAMEUNIT;
+
+
+        var covid = newdata[e.features[0].id].condicioncovid != "" ?
+          'Se han detectado <span style="font-size:14px;color:#005695;font-weight:700;">' + newdata[e
+            .features[0].id]
+          .covid.toLocaleString("es-ES") +
+          '</span> casos confirmados de COVID-19 en el municipio: una tasa de <span style="color:#005695;font-weight:700;">' +
+          newdata[
+            e
+            .features[0].id]
+          .tasa.toLocaleString("es-ES") + '</span> casos por cada 100.000 habitantes.' :
+          e.features[0].properties.provincia == 'Toledo' | e.features[0].properties.provincia == 'Cuenca' | e.features[0].properties.provincia == 'Albacete' |
+          e.features[0].properties.provincia == 'Guadalajara' | e.features[0].properties.provincia == 'Ciudad Real'  ?
+          'Castilla-La Mancha no publica el total acumulado de casos de COVID-19. Solo las cifras de las últimas dos semanas para municipios de más de 1.000 habitantes.' :
+          'No existen casos detectados o no se dispone de datos.';
+
+        var muertos = newdata[e.features[0].id].muertos > 0 ?
+          ' Han fallecido <span style=";color:#000000;font-weight:700;">' + newdata[e
+            .features[0].id]
+          .muertos.toLocaleString("es-ES") +
+          '</span>' :
+          '';
+
+        var recuperados = newdata[e.features[0].id].recuperados > 0 ?
+          ' y <span style=";color:#33a02c;font-weight:700;">' + newdata[e
+            .features[0].id]
+          .recuperados.toLocaleString("es-ES") +
+          '</span> se han recuperado.' :
+          '';
+
+        var tasa = newdata[e.features[0].id].condicioncovid != "" ?
+          '<p style="line-height:16px">Una tasa de <span style="color:#005695;font-weight:700;">' + newdata[
+            e
+            .features[0].id]
+          .tasa.toLocaleString("es-ES") + '</span> casos por cada 100.000 habitantes.</p>' : '';
+
+
+
+
+        var casos14dias = newdata[e.features[0].id].covid14dias != "" ?
+          '<p style="line-height:16px">Se han detectado <span style="color:#e6550d;font-weight:700;">' +
+          newdata[
+            e
+            .features[0].id]
+          .covid14dias.toLocaleString("es-ES") +
+          '</span> casos por prueba PCR en los últimos 14 días: <span style="color:#e6550d;font-weight:700;">' +
+          newdata[
+            e
+            .features[0].id]
+          .ia14dias.toLocaleString("es-ES") + '</span> por 100.000 hab.</p>' : '';
+
+
+
+        var poblacion = newdata[e.features[0].id].poblacion.toLocaleString("es-ES");
+        var provincia = e.features[0].properties.provincia;
+
+        var actualizacion = actualizacionfecha(e.features[0].properties.provincia);
+
+        // based on the feature found.
+        popup.setLngLat(e.lngLat)
+          .setHTML('<div id="mapbox-tooltip-contenedor"><h3>' + municipio +
+            '<span style="font-size:12px;font-weight:400"> (' + provincia +
+            ')</span></h3><p style="margin-bottom:0px">' + poblacion +
+            ' hab.</p><p style="margin-bottom:0px;line-height:16px">' + covid +
+            '</p>' + casos14dias + '<p style="margin-bottom:0px;line-height:16px;font-style:italic">' +
+            actualizacion + '</p></div>')
+          .setMaxWidth(isMobile ? "700px" : "")
+          .addTo(map);
+
+      });
+
+
+      if (!isMobile) {
+        map.on('mouseleave', 'municipios-join', function () {
+          map.getCanvas().style.cursor = '';
+          popup.remove();
+          if (hoveredStateId) {
+            map.setFeatureState({
+              source: 'municipiospoligonos',
+              sourceLayer: 'municipiosv4canariaspoblacion',
+              id: hoveredStateId
+            }, {
+              hover: false
+            });
+          }
+          hoveredStateId = null;
+        })
+      }
+
+      // var setAfterLoad = function (e) {
+      //   if (e.sourceId === 'municipiospoligonos' && e.isSourceLoaded) {
+      //     setCountiesColor();
+      //     map.off('sourcedata', setAfterLoad)
+      //   }
+      // }
+
+
+      var setAfterLoad = function (e) {
+        if (map.isSourceLoaded('provinciaspoligonos')) {
+          setCountiesColor();
+          setBubblesColor();
+          map.off('sourcedata', setAfterLoad)
+        }
+      }
+
+      if (map.isSourceLoaded('municipiospoligonos')) {
+        setCountiesColor();
+      } else {
+        map.on('sourcedata', setAfterLoad);
+      }
+
+
+
+    }
+  });
+</script>

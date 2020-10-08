@@ -14,6 +14,7 @@
   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-ajax/2.1.0/leaflet.ajax.min.js"></script>
+  <script src="https://unpkg.com/topojson@3.0.2/dist/topojson.min.js"></script>
 
   <style>
     html,
@@ -35,7 +36,9 @@
 
   <div id='map'></div>
 
+  <script type="text/javascript" src="canary_displaced_reduced5oct.js">
 
+  </script>
   <script type="text/javascript">
     var map = L.map('map').setView([40.3, -3.8], 5);
 
@@ -48,11 +51,20 @@
       zoomOffset: -1
     }).addTo(map);
 
-    url = 'canary_displaced_reduced5oct.json';
-    var geojson = new L.GeoJSON.AJAX("URL");
-    geojson.on('data:loaded', function() {
-      geojson.addTo(mymap);
-    });
+    // var geojson = L.geoJson(munis).addTo(map);
+
+    //MOVIDAS PARA LEER EL GEOJSON EXTERNO
+    // url = 'https://raw.githubusercontent.com/josemolinag/leaflet_choropleth/main/canary_displaced_reduced5oct.json';
+    // function fetchJSON(url) {
+    // return fetch(url)
+    // .then(function(response) {
+    // return response.json();
+    // });
+    // }
+    // var geojson = new L.GeoJSON.AJAX("URL");
+    // geojson.on('data:loaded', function() {
+    // geojson.addTo(mymap);
+    // });
     // var geojson = L.geoJson(statesData).addTo(map);
     // // Get GeoJSON data and create features.
     // var bbTeam = L.geoJSON(null, {
@@ -64,6 +76,20 @@
     // $.getJSON(url, function(data) {
     //   bbTeam.addData(data);
     // });
+
+    // // Null variable that will hold layer
+    // url = 'canary_displaced_reduced5oct.json'
+    // var stateLayer = L.geoJson(null, {
+    //   onEachFeature: forEachFeature,
+    //   style: style
+    // });
+    //
+    // //Adding data to variable
+    // $.getJSON(url, function(data) {
+    //   stateLayer.addData(data);
+    // });
+    // //Adding layer to map
+    // stateLayer.addTo(map);
 
     function getColor(d) {
       return d > 1000 ? '#800026' :
@@ -78,8 +104,8 @@
 
     function style(feature) {
       return {
-        fillColor: getColor(feature.properties.density),
-        weight: 2,
+        fillColor: getColor(feature.properties.ia_ult_14dias),
+        weight: 0.5,
         opacity: 1,
         color: 'white',
         dashArray: '3',
@@ -87,6 +113,9 @@
       };
     }
 
+    L.geoJson(munis, {
+      style: style
+    }).addTo(map);
   </script>
 
 
